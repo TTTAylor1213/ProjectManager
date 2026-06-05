@@ -37,14 +37,25 @@ router.get("/:id", (req: Request, res: Response) => {
 
 router.post("/", (req: Request, res: Response) => {
   try {
-    const { faultDescription, repairStatus, sentDate, returnedDate, repairProvider, cost, handlerId, deviceId, projectId } = req.body;
+    const { faultDescription, faultType, repairStatus, sentDate, returnedDate, repairProvider, cost, result, handlerId, deviceId, projectId } = req.body;
     if (!faultDescription) return res.status(400).json({ success: false, error: "故障描述不能为空" });
     const ts = now();
     const id = insert(
-      `INSERT INTO repair (fault_description, repair_status, sent_date, returned_date, repair_provider, cost, handler_id, device_id, project_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [faultDescription, repairStatus || "pending", sentDate || ts, returnedDate || null, repairProvider || "", cost || 0, handlerId || null, deviceId || null, projectId || null, ts, ts]
+      `INSERT INTO repair (fault_description, fault_type, repair_status, sent_date, returned_date, repair_provider, cost, result, handler_id, device_id, project_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [faultDescription, faultType || "", repairStatus || "pending", sentDate || ts, returnedDate || null,
+       repairProvider || "", cost || 0, result || "", handlerId || null, deviceId || null, projectId || null, ts, ts]
     );
+    // 同步设备维修状态
+    if (deviceId && repairStatus) {
+      const activeRepairStatuses = ["pending", "diagnosing", "repairing", "waiting_parts"];
+      const resolvedStatuses = ["fixed", "returned", "closed"];
+      if (activeRepairStatuses.includes(repairStatus)) {
+        run("UPDATE device SET repair_status='repairing', status='repairing' WHERE id=?", [deviceId]);
+      } else if (resolvedStatuses.includes(repairStatus)) {
+        run("UPDATE device SET repair_status='normal', status='normal' WHERE id=?", [deviceId]);
+      }
+    }
     const row = queryOne<any>(`${JOIN_SQL} WHERE repair.id = ?`, [id]);
     res.status(201).json({ success: true, data: row });
   } catch (e: any) {
@@ -57,12 +68,26 @@ router.put("/:id", (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const existing = queryOne("SELECT * FROM repair WHERE id = ?", [id]);
     if (!existing) return res.status(404).json({ success: false, error: "未找到该维修记录" });
-    const { faultDescription, repairStatus, sentDate, returnedDate, repairProvider, cost, handlerId, deviceId, projectId } = req.body;
+    const { faultDescription, faultType, repairStatus, sentDate, returnedDate, repairProvider, cost, result, handlerId, deviceId, projectId } = req.body;
     const ts = now();
-    run(`UPDATE repair SET fault_description=?, repair_status=?, sent_date=?, returned_date=?, repair_provider=?, cost=?, handler_id=?, device_id=?, project_id=?, updated_at=? WHERE id=?`,
-      [faultDescription ?? existing.fault_description, repairStatus ?? existing.repair_status, sentDate ?? existing.sent_date,
-       returnedDate ?? existing.returned_date, repairProvider ?? existing.repair_provider, cost ?? existing.cost,
+    run(`UPDATE repair SET fault_description=?, fault_type=?, repair_status=?, sent_date=?, returned_date=?, repair_provider=?, cost=?, result=?, handler_id=?, device_id=?, project_id=?, updated_at=? WHERE id=?`,
+      [faultDescription ?? existing.fault_description, faultType ?? existing.fault_type,
+       repairStatus ?? existing.repair_status, sentDate ?? existing.sent_date,
+       returnedDate ?? existing.returned_date, repairProvider ?? existing.repair_provider,
+       cost ?? existing.cost, result ?? existing.result,
        handlerId ?? existing.handler_id, deviceId ?? existing.device_id, projectId ?? existing.project_id, ts, id]);
+    // 同步设备维修状态
+    const finalDeviceId = deviceId ?? existing.device_id;
+    const finalRepairStatus = repairStatus ?? existing.repair_status;
+    if (finalDeviceId && finalRepairStatus) {
+      const activeRepairStatuses = ["pending", "diagnosing", "repairing", "waiting_parts"];
+      const resolvedStatuses = ["fixed", "returned", "closed"];
+      if (activeRepairStatuses.includes(finalRepairStatus)) {
+        run("UPDATE device SET repair_status='repairing', status='repairing' WHERE id=?", [finalDeviceId]);
+      } else if (resolvedStatuses.includes(finalRepairStatus)) {
+        run("UPDATE device SET repair_status='normal', status='normal' WHERE id=?", [finalDeviceId]);
+      }
+    }
     const row = queryOne<any>(`${JOIN_SQL} WHERE repair.id = ?`, [id]);
     res.json({ success: true, data: row });
   } catch (e: any) {

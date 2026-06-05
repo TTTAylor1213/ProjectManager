@@ -44,6 +44,14 @@ router.post("/", (req: Request, res: Response) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [recipient, recipientPhone || "", address || "", trackingNumber || "", shipDate || ts, status || "in_transit", note || "", deviceId || null, projectId || null, ts, ts]
     );
+    // 同步设备发货状态
+    if (deviceId) {
+      if (status === "delivered" || status === "shipped") {
+        run("UPDATE device SET ship_status='shipped', status='customer_site', ship_date=? WHERE id=?", [shipDate || ts, deviceId]);
+      } else if (status === "returned") {
+        run("UPDATE device SET ship_status='returned' WHERE id=?", [deviceId]);
+      }
+    }
     const row = queryOne<any>(`${JOIN_SQL} WHERE shipment.id = ?`, [id]);
     res.status(201).json({ success: true, data: row });
   } catch (e: any) {
@@ -62,6 +70,17 @@ router.put("/:id", (req: Request, res: Response) => {
       [recipient ?? existing.recipient, recipientPhone ?? existing.recipient_phone, address ?? existing.address,
        trackingNumber ?? existing.tracking_number, shipDate ?? existing.ship_date, status ?? existing.status,
        note ?? existing.note, deviceId ?? existing.device_id, projectId ?? existing.project_id, ts, id]);
+    // 同步设备状态
+    const finalDeviceId = deviceId ?? existing.device_id;
+    const finalStatus = status ?? existing.status;
+    const finalShipDate = shipDate ?? existing.ship_date;
+    if (finalDeviceId) {
+      if (finalStatus === "delivered" || finalStatus === "shipped") {
+        run("UPDATE device SET ship_status='shipped', status='customer_site', ship_date=? WHERE id=?", [finalShipDate || ts, finalDeviceId]);
+      } else if (finalStatus === "returned") {
+        run("UPDATE device SET ship_status='returned' WHERE id=?", [finalDeviceId]);
+      }
+    }
     const row = queryOne<any>(`${JOIN_SQL} WHERE shipment.id = ?`, [id]);
     res.json({ success: true, data: row });
   } catch (e: any) {

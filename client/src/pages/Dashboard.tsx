@@ -1,106 +1,191 @@
-import { useState, useEffect } from "react";
-import { Row, Col, Card, Statistic, Typography, Table, Tag } from "antd";
-import {
-  ProjectOutlined, ToolOutlined, SendOutlined, SettingOutlined,
-  ExperimentOutlined, CodeOutlined, DatabaseOutlined, TeamOutlined,
-} from "@ant-design/icons";
+import { useState, useEffect, useCallback } from "react";
+import { Row, Col, Card, Statistic, Typography, Space, Radio, Input, Descriptions, Divider, Empty } from "antd";
+import { SearchOutlined, ProjectOutlined, ToolOutlined, SendOutlined, SettingOutlined, TeamOutlined, WarningOutlined } from "@ant-design/icons";
+import StatusTag from "../components/StatusTag";
+import { projectStatusMap, subStatusMap, priorityMap, riskLevelMap } from "./statusLabels";
 import api from "../api";
-import { projectStatusMap, deviceStatusMap, repairStatusMap } from "./statusLabels";
 import dayjs from "dayjs";
 
-interface StatCount { total: number; }
+interface ProjectCard {
+  id: number; name: string; code: string; status: string;
+  manager_name?: string; software_owner_name?: string; hardware_owner_name?: string;
+  fpga_owner_name?: string; arm_owner_name?: string;
+  arm_status: string; fpga_status: string; pc_status: string; hardware_status: string;
+  priority: string; risk_level: string; remark: string;
+  device_count: number; shipped_count: number; customer_site_count: number; repairing_count: number;
+  target_date: string; actual_finish_date: string | null; updated_at: string;
+}
+
+interface Summary {
+  totalProjects: number; activeProjects: number; completedProjects: number; riskProjects: number;
+  totalDevices: number; shippedDevices: number; customerSiteDevices: number; repairingDevices: number;
+  totalPersonnel: number; totalRepairs: number;
+}
 
 export default function Dashboard() {
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [recentProjects, setRecentProjects] = useState<any[]>([]);
-  const [recentRepairs, setRecentRepairs] = useState<any[]>([]);
+  const [cards, setCards] = useState<ProjectCard[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  const fetchCards = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (statusFilter !== "all") params.status = statusFilter;
+      const res = await api.get("/dashboard/cards", { params });
+      setCards(res.data.data || []);
+    } catch { /* ignore */ } finally { setLoading(false); }
+  }, [statusFilter]);
+
+  useEffect(() => { fetchCards(); }, [fetchCards]);
   useEffect(() => {
-    async function load() {
-      try {
-        const tables = ["personnel", "project", "device", "shipment", "repair", "rd_device", "software", "hardware", "note"];
-        const results = await Promise.all(tables.map((t) => api.get(`/${t === "rd_device" ? "rd-devices" : t === "personnel" ? "personnel" : t + "s"}`)));
-        const c: Record<string, number> = {};
-        tables.forEach((t, i) => { c[t] = results[i].data.total || results[i].data.data?.length || 0; });
-        setCounts(c);
-
-        // 最近项目和维修
-        const [pr, rp] = await Promise.all([
-          api.get("/projects"),
-          api.get("/repairs"),
-        ]);
-        setRecentProjects((pr.data.data || []).slice(0, 5));
-        setRecentRepairs((rp.data.data || []).slice(0, 5));
-      } catch {
-        /* ignore */
-      }
-    }
-    load();
+    api.get("/dashboard/summary").then(r => setSummary(r.data.data)).catch(() => {});
   }, []);
 
-  const stats = [
-    { title: "项目总数", value: counts.project || 0, icon: <ProjectOutlined />, color: "#1677ff" },
-    { title: "设备总数", value: counts.device || 0, icon: <ToolOutlined />, color: "#52c41a" },
-    { title: "在研设备", value: counts.rd_device || 0, icon: <ExperimentOutlined />, color: "#722ed1" },
-    { title: "发货记录", value: counts.shipment || 0, icon: <SendOutlined />, color: "#13c2c2" },
-    { title: "维修记录", value: counts.repair || 0, icon: <SettingOutlined />, color: "#fa8c16" },
-    { title: "软件版本", value: counts.software || 0, icon: <CodeOutlined />, color: "#eb2f96" },
-    { title: "硬件版本", value: counts.hardware || 0, icon: <DatabaseOutlined />, color: "#2f54eb" },
-    { title: "负责人", value: counts.personnel || 0, icon: <TeamOutlined />, color: "#faad14" },
+  const filteredCards = cards.filter(c =>
+    !search || c.name.includes(search) || c.code.includes(search) ||
+    (c.manager_name && c.manager_name.includes(search))
+  );
+
+  const statusFilterOptions = [
+    { label: "全部", value: "all" },
+    ...Object.entries(projectStatusMap).map(([k, v]) => ({ label: v.label, value: k })),
   ];
 
   return (
     <div>
-      <Typography.Title level={3}>仪表盘</Typography.Title>
+      <Typography.Title level={3} style={{ marginBottom: 16 }}>设备研发状态看板</Typography.Title>
 
       {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {stats.map((s) => (
-          <Col xs={12} sm={8} md={6} key={s.title}>
-            <Card>
-              <Statistic
-                title={s.title}
-                value={s.value}
-                prefix={<span style={{ color: s.color }}>{s.icon}</span>}
-              />
-            </Card>
+      {summary && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="项目总数" value={summary.totalProjects} prefix={<ProjectOutlined style={{ color: "#1677ff" }} />} /></Card>
           </Col>
-        ))}
-      </Row>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="在研" value={summary.activeProjects} valueStyle={{ color: "#1677ff" }} /></Card>
+          </Col>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="已完成" value={summary.completedProjects} valueStyle={{ color: "#52c41a" }} /></Card>
+          </Col>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="风险项目" value={summary.riskProjects} prefix={<WarningOutlined style={{ color: "#ff4d4f" }} />} valueStyle={{ color: summary.riskProjects > 0 ? "#ff4d4f" : undefined }} /></Card>
+          </Col>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="设备总数" value={summary.totalDevices} prefix={<ToolOutlined style={{ color: "#52c41a" }} />} /></Card>
+          </Col>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="已发货" value={summary.shippedDevices} prefix={<SendOutlined style={{ color: "#722ed1" }} />} /></Card>
+          </Col>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="客户现场" value={summary.customerSiteDevices} valueStyle={{ color: "#13c2c2" }} /></Card>
+          </Col>
+          <Col xs={12} sm={6} md={3}>
+            <Card size="small"><Statistic title="维修中" value={summary.repairingDevices} prefix={<SettingOutlined style={{ color: "#fa8c16" }} />} valueStyle={{ color: summary.repairingDevices > 0 ? "#fa8c16" : undefined }} /></Card>
+          </Col>
+        </Row>
+      )}
 
-      {/* 最近项目和维修 */}
-      <Row gutter={16}>
-        <Col xs={24} lg={12}>
-          <Card title="最近项目" style={{ marginBottom: 16 }}>
-            <Table
-              rowKey="id"
-              dataSource={recentProjects}
-              pagination={false}
-              size="small"
-              columns={[
-                { title: "名称", dataIndex: "name", ellipsis: true },
-                { title: "状态", dataIndex: "status", width: 90, render: (s: string) => { const c = projectStatusMap[s]; return c ? <Tag color={c.color}>{c.label}</Tag> : s; } },
-                { title: "日期", dataIndex: "start_date", width: 100, render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD") : "-" },
-              ]}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="最近维修" style={{ marginBottom: 16 }}>
-            <Table
-              rowKey="id"
-              dataSource={recentRepairs}
-              pagination={false}
-              size="small"
-              columns={[
-                { title: "故障", dataIndex: "fault_description", ellipsis: true },
-                { title: "状态", dataIndex: "repair_status", width: 90, render: (s: string) => { const c = repairStatusMap[s]; return c ? <Tag color={c.color}>{c.label}</Tag> : s; } },
-                { title: "费用", dataIndex: "cost", width: 80, render: (c: number) => `¥${c}` },
-              ]}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* 状态筛选 */}
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Radio.Group
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          optionType="button"
+          buttonStyle="solid"
+          options={statusFilterOptions}
+        />
+        <Input
+          placeholder="搜索项目..."
+          prefix={<SearchOutlined />}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          allowClear
+          style={{ width: 200 }}
+        />
+      </Space>
+
+      {/* 项目卡片墙 */}
+      {filteredCards.length === 0 ? (
+        <Empty description="暂无匹配的项目" />
+      ) : (
+        <Row gutter={[16, 16]}>
+          {filteredCards.map((project) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={project.id}>
+              <Card
+                hoverable
+                loading={loading}
+                title={
+                  <Space>
+                    <span style={{ fontWeight: "bold", fontSize: 16 }}>{project.name}</span>
+                    <StatusTag status={project.status} map={projectStatusMap} />
+                    {project.risk_level !== "low" && <StatusTag status={project.risk_level} map={riskLevelMap} />}
+                  </Space>
+                }
+                extra={<StatusTag status={project.priority} map={priorityMap} />}
+                size="small"
+              >
+                {/* 编号 + 负责人 */}
+                <Descriptions size="small" column={2} colon={false}>
+                  <Descriptions.Item label="编号">{project.code}</Descriptions.Item>
+                  <Descriptions.Item label="负责人">{project.manager_name || "-"}</Descriptions.Item>
+                </Descriptions>
+
+                <Divider style={{ margin: "8px 0" }} />
+
+                {/* 子模块状态 */}
+                <div style={{ marginBottom: 8 }}>
+                  <Space wrap size={[4, 4]}>
+                    <span style={{ fontSize: 12, color: "#888" }}>ARM:</span>
+                    <StatusTag status={project.arm_status} map={subStatusMap} />
+                    <span style={{ fontSize: 12, color: "#888" }}>FPGA:</span>
+                    <StatusTag status={project.fpga_status} map={subStatusMap} />
+                    <span style={{ fontSize: 12, color: "#888" }}>PC:</span>
+                    <StatusTag status={project.pc_status} map={subStatusMap} />
+                    <span style={{ fontSize: 12, color: "#888" }}>HW:</span>
+                    <StatusTag status={project.hardware_status} map={subStatusMap} />
+                  </Space>
+                </div>
+
+                {/* 负责人信息 */}
+                <Descriptions size="small" column={2} colon={false} style={{ marginBottom: 4 }}>
+                  <Descriptions.Item label="软件">{project.software_owner_name || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="硬件">{project.hardware_owner_name || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="FPGA">{project.fpga_owner_name || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="ARM">{project.arm_owner_name || "-"}</Descriptions.Item>
+                </Descriptions>
+
+                <Divider style={{ margin: "4px 0" }} />
+
+                {/* 设备统计 */}
+                <Row gutter={4}>
+                  <Col span={6}><Statistic title="设备" value={project.device_count} valueStyle={{ fontSize: 14 }} /></Col>
+                  <Col span={6}><Statistic title="已发货" value={project.shipped_count} valueStyle={{ fontSize: 14, color: "#722ed1" }} /></Col>
+                  <Col span={6}><Statistic title="客户" value={project.customer_site_count} valueStyle={{ fontSize: 14, color: "#13c2c2" }} /></Col>
+                  <Col span={6}><Statistic title="返修" value={project.repairing_count} valueStyle={{ fontSize: 14, color: project.repairing_count > 0 ? "#ff4d4f" : undefined }} /></Col>
+                </Row>
+
+                {project.remark && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#888", lineHeight: "18px", maxHeight: 36, overflow: "hidden" }}>
+                    💬 {project.remark}
+                  </div>
+                )}
+
+                <Divider style={{ margin: "4px 0" }} />
+
+                {/* 底部信息 */}
+                <div style={{ fontSize: 11, color: "#aaa", display: "flex", justifyContent: "space-between" }}>
+                  <span>目标: {project.target_date ? dayjs(project.target_date).format("MM-DD") : "-"}</span>
+                  {project.actual_finish_date && <span>完成: {dayjs(project.actual_finish_date).format("MM-DD")}</span>}
+                  <span>更新: {dayjs(project.updated_at).format("MM-DD")}</span>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
     </div>
   );
 }

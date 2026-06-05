@@ -45,15 +45,15 @@ router.get("/:id", (req: Request, res: Response) => {
 // POST /api/personnel — 新增
 router.post("/", (req: Request, res: Response) => {
   try {
-    const { name, department, phone, email, role } = req.body;
+    const { name, department, phone, email, role, remark } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, error: "姓名不能为空" });
     }
     const ts = now();
     const id = insert(
-      `INSERT INTO personnel (name, department, phone, email, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [name, department || "", phone || "", email || "", role || "", ts, ts]
+      `INSERT INTO personnel (name, department, phone, email, role, remark, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, department || "", phone || "", email || "", role || "", remark || "", ts, ts]
     );
     const row = queryOne("SELECT * FROM personnel WHERE id = ?", [id]);
     res.status(201).json({ success: true, data: row });
@@ -65,7 +65,7 @@ router.post("/", (req: Request, res: Response) => {
 // PUT /api/personnel/:id — 更新
 router.put("/:id", (req: Request, res: Response) => {
   try {
-    const { name, department, phone, email, role } = req.body;
+    const { name, department, phone, email, role, remark } = req.body;
     const id = Number(req.params.id);
     const existing = queryOne("SELECT * FROM personnel WHERE id = ?", [id]);
     if (!existing) {
@@ -73,13 +73,14 @@ router.put("/:id", (req: Request, res: Response) => {
     }
     const ts = now();
     run(
-      `UPDATE personnel SET name=?, department=?, phone=?, email=?, role=?, updated_at=? WHERE id=?`,
+      `UPDATE personnel SET name=?, department=?, phone=?, email=?, role=?, remark=?, updated_at=? WHERE id=?`,
       [
         name ?? existing.name,
         department ?? existing.department,
         phone ?? existing.phone,
         email ?? existing.email,
         role ?? existing.role,
+        remark ?? existing.remark,
         ts,
         id,
       ]

@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { initDb, run } from "./db/index.js";
+import { runMigrations } from "./db/migrate.js";
+import { seedIfEmpty } from "./db/seed.js";
 import personnelRouter from "./routes/personnel.js";
 import projectRouter from "./routes/project.js";
 import deviceRouter from "./routes/device.js";
@@ -11,6 +13,7 @@ import softwareRouter from "./routes/software.js";
 import hardwareRouter from "./routes/hardware.js";
 import noteRouter from "./routes/note.js";
 import exportRouter from "./routes/export.js";
+import dashboardRouter from "./routes/dashboard.js";
 
 const app = express();
 const PORT = 3001;
@@ -151,6 +154,7 @@ app.use("/api/software", softwareRouter);
 app.use("/api/hardware", hardwareRouter);
 app.use("/api/notes", noteRouter);
 app.use("/api/export", exportRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 // 健康检查
 app.get("/api/health", (_req, res) => {
@@ -161,7 +165,9 @@ app.get("/api/health", (_req, res) => {
 async function start() {
   await initDb();
   initTables();
-  console.log("✅ 数据库表初始化完成");
+  runMigrations();
+  seedIfEmpty();
+  console.log("✅ 数据库初始化完成");
 
   app.listen(PORT, () => {
     console.log(`✅ 后端服务已启动: http://localhost:${PORT}`);
