@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { Table, Button, Space, Input, Select, Tag, Modal, Form, App, Popconfirm, Typography, DatePicker } from "antd";
+import { Table, Button, Space, Input, Select, Modal, Form, App, Popconfirm, Typography, DatePicker } from "antd";
 import { PlusOutlined, SearchOutlined, ExportOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api, { exportExcel } from "../api";
+import StatusTag from "../components/StatusTag";
 import { softwareStatusMap } from "./statusLabels";
 import dayjs from "dayjs";
 
 interface Software {
   id: number; name: string; version: string; status: string; update_date: string; note: string;
-  developerId: number | null; deviceId: number | null; projectId: number | null;
+  developer_id: number | null; device_id: number | null; project_id: number | null;
   device_name?: string; project_name?: string; developer_name?: string;
 }
 
@@ -43,7 +44,7 @@ export default function SoftwareList() {
   };
 
   const handleAdd = () => { setEditing(null); form.resetFields(); fetchOpts(); setModalOpen(true); };
-  const handleEdit = (r: Software) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, updateDate: r.update_date ? dayjs(r.update_date) : undefined }); setModalOpen(true); };
+  const handleEdit = (r: Software) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, updateDate: r.update_date ? dayjs(r.update_date) : undefined, developerId: r.developer_id, deviceId: r.device_id, projectId: r.project_id }); setModalOpen(true); };
   const handleDelete = async (id: number) => { await api.delete(`/software/${id}`); message.success("删除成功"); fetchData(); };
   const handleSubmit = async () => {
     const v = await form.validateFields();
@@ -57,7 +58,7 @@ export default function SoftwareList() {
     { title: "ID", dataIndex: "id", width: 50 },
     { title: "软件名称", dataIndex: "name", width: 140 },
     { title: "版本", dataIndex: "version", width: 100 },
-    { title: "状态", dataIndex: "status", width: 100, render: (s: string) => { const c = softwareStatusMap[s]; return c ? <Tag color={c.color}>{c.label}</Tag> : s; } },
+    { title: "状态", dataIndex: "status", width: 100, render: (s: string) => <StatusTag status={s} map={softwareStatusMap} /> },
     { title: "更新日期", dataIndex: "update_date", width: 110, render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD") : "-" },
     { title: "开发者", dataIndex: "developer_name", width: 100 },
     { title: "关联设备", dataIndex: "device_name", width: 120 },

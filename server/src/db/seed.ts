@@ -106,7 +106,7 @@ export function seedIfEmpty(): void {
   );
 
   // 设备3: EX10XXA设备2（返修中）
-  insert(
+  const dev3 = insert(
     `INSERT INTO device (name, model, serial_number, device_type, device_no, status, location, customer,
      hardware_version, software_version, fpga_version, arm_version,
      ship_status, ship_date, return_date, repair_status,
@@ -134,7 +134,7 @@ export function seedIfEmpty(): void {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       "客户反馈通道采集异常，数据偶尔跳变", "hardware", "repairing", "2026-03-15",
-      "公司维修组", 0, "", p3, dev2, prj2, ts, ts,
+      "公司维修组", 0, "", p3, dev3, prj2, ts, ts,
     ]
   );
 

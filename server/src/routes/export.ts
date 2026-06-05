@@ -7,7 +7,7 @@ const router = Router();
 // GET /api/export/:table — 导出指定表数据为 Excel
 router.get("/:table", async (req: Request, res: Response) => {
   try {
-    const { table } = req.params;
+    const table = req.params.table as string;
     const allowedTables = ["personnel", "project", "device", "shipment", "repair", "rd_device", "software", "hardware", "note"];
 
     if (!allowedTables.includes(table)) {

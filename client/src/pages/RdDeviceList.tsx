@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { Table, Button, Space, Input, Select, Tag, Modal, Form, App, Popconfirm, Typography, DatePicker } from "antd";
+import { Table, Button, Space, Input, Select, Modal, Form, App, Popconfirm, Typography, DatePicker } from "antd";
 import { PlusOutlined, SearchOutlined, ExportOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api, { exportExcel } from "../api";
+import StatusTag from "../components/StatusTag";
 import { rdPhaseMap } from "./statusLabels";
 import dayjs from "dayjs";
 
 interface RdDevice {
   id: number; name: string; model: string; research_phase: string; current_status: string;
-  target_date: string; specs: string; responsibleId: number | null; projectId: number | null;
+  target_date: string; specs: string; responsible_id: number | null; project_id: number | null;
   project_name?: string; responsible_name?: string;
 }
 
@@ -42,7 +43,7 @@ export default function RdDeviceList() {
   };
 
   const handleAdd = () => { setEditing(null); form.resetFields(); fetchOpts(); setModalOpen(true); };
-  const handleEdit = (r: RdDevice) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, targetDate: r.target_date ? dayjs(r.target_date) : undefined }); setModalOpen(true); };
+  const handleEdit = (r: RdDevice) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, targetDate: r.target_date ? dayjs(r.target_date) : undefined, projectId: r.project_id, responsibleId: r.responsible_id, researchPhase: r.research_phase, currentStatus: r.current_status }); setModalOpen(true); };
   const handleDelete = async (id: number) => { await api.delete(`/rd-devices/${id}`); message.success("删除成功"); fetchData(); };
   const handleSubmit = async () => {
     const v = await form.validateFields();
@@ -56,7 +57,7 @@ export default function RdDeviceList() {
     { title: "ID", dataIndex: "id", width: 50 },
     { title: "设备名称", dataIndex: "name", width: 150 },
     { title: "型号", dataIndex: "model", width: 100 },
-    { title: "研发阶段", dataIndex: "research_phase", width: 100, render: (s: string) => { const c = rdPhaseMap[s]; return c ? <Tag color={c.color}>{c.label}</Tag> : s; } },
+    { title: "研发阶段", dataIndex: "research_phase", width: 100, render: (s: string) => <StatusTag status={s} map={rdPhaseMap} /> },
     { title: "当前状态", dataIndex: "current_status", width: 150, ellipsis: true },
     { title: "目标日期", dataIndex: "target_date", width: 110, render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD") : "-" },
     { title: "规格参数", dataIndex: "specs", width: 180, ellipsis: true },

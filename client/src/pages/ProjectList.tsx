@@ -10,8 +10,8 @@ import dayjs from "dayjs";
 interface Project {
   id: number; name: string; code: string; description: string; status: string;
   start_date: string; end_date: string | null; target_date: string; actual_finish_date: string | null;
-  managerId: number | null; softwareOwnerId: number | null; hardwareOwnerId: number | null;
-  fpgaOwnerId: number | null; armOwnerId: number | null;
+  manager_id: number | null; software_owner_id: number | null; hardware_owner_id: number | null;
+  fpga_owner_id: number | null; arm_owner_id: number | null;
   arm_status: string; fpga_status: string; pc_status: string; hardware_status: string;
   priority: string; risk_level: string; remark: string;
   manager_name?: string; software_owner_name?: string; hardware_owner_name?: string;
@@ -45,7 +45,7 @@ export default function ProjectList() {
     try { const res = await api.get("/personnel"); setPersonnel(res.data.data || []); } catch { /* ignore */ }
   };
   const handleAdd = () => { setEditing(null); form.resetFields(); fetchPersonnel(); setModalOpen(true); };
-  const handleEdit = (r: Project) => { setEditing(r); fetchPersonnel(); form.setFieldsValue({ ...r, startDate: r.start_date ? dayjs(r.start_date) : undefined, endDate: r.end_date ? dayjs(r.end_date) : undefined, targetDate: r.target_date ? dayjs(r.target_date) : undefined, actualFinishDate: r.actual_finish_date ? dayjs(r.actual_finish_date) : undefined }); setModalOpen(true); };
+  const handleEdit = (r: Project) => { setEditing(r); fetchPersonnel(); form.setFieldsValue({ ...r, startDate: r.start_date ? dayjs(r.start_date) : undefined, endDate: r.end_date ? dayjs(r.end_date) : undefined, targetDate: r.target_date ? dayjs(r.target_date) : undefined, actualFinishDate: r.actual_finish_date ? dayjs(r.actual_finish_date) : undefined, managerId: r.manager_id, softwareOwnerId: r.software_owner_id, hardwareOwnerId: r.hardware_owner_id, fpgaOwnerId: r.fpga_owner_id, armOwnerId: r.arm_owner_id, armStatus: r.arm_status, fpgaStatus: r.fpga_status, pcStatus: r.pc_status, hardwareStatus: r.hardware_status, riskLevel: r.risk_level }); setModalOpen(true); };
   const handleDelete = async (id: number) => { await api.delete(`/projects/${id}`); message.success("删除成功"); fetchData(); };
   const handleSubmit = async () => {
     const values = await form.validateFields();

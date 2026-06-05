@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { Table, Button, Space, Input, Select, Tag, Modal, Form, App, Popconfirm, Typography, DatePicker } from "antd";
+import { Table, Button, Space, Input, Select, Modal, Form, App, Popconfirm, Typography, DatePicker } from "antd";
 import { PlusOutlined, SearchOutlined, ExportOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api, { exportExcel } from "../api";
+import StatusTag from "../components/StatusTag";
 import { shipmentStatusMap } from "./statusLabels";
 import dayjs from "dayjs";
 
 interface Shipment {
   id: number; recipient: string; recipient_phone: string; address: string; tracking_number: string;
-  ship_date: string; status: string; note: string; deviceId: number | null; projectId: number | null;
+  ship_date: string; status: string; note: string; device_id: number | null; project_id: number | null;
   device_name?: string; project_name?: string;
 }
 
@@ -42,7 +43,7 @@ export default function ShipmentList() {
   };
 
   const handleAdd = () => { setEditing(null); form.resetFields(); fetchOpts(); setModalOpen(true); };
-  const handleEdit = (r: Shipment) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, shipDate: r.ship_date ? dayjs(r.ship_date) : undefined }); setModalOpen(true); };
+  const handleEdit = (r: Shipment) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, shipDate: r.ship_date ? dayjs(r.ship_date) : undefined, deviceId: r.device_id, projectId: r.project_id, recipientPhone: r.recipient_phone, trackingNumber: r.tracking_number }); setModalOpen(true); };
   const handleDelete = async (id: number) => { await api.delete(`/shipments/${id}`); message.success("删除成功"); fetchData(); };
   const handleSubmit = async () => {
     const v = await form.validateFields();
@@ -59,7 +60,7 @@ export default function ShipmentList() {
     { title: "地址", dataIndex: "address", width: 180, ellipsis: true },
     { title: "快递单号", dataIndex: "tracking_number", width: 130 },
     { title: "发货日期", dataIndex: "ship_date", width: 110, render: (d: string) => d ? dayjs(d).format("YYYY-MM-DD") : "-" },
-    { title: "状态", dataIndex: "status", width: 100, render: (s: string) => { const c = shipmentStatusMap[s]; return c ? <Tag color={c.color}>{c.label}</Tag> : s; } },
+    { title: "状态", dataIndex: "status", width: 100, render: (s: string) => <StatusTag status={s} map={shipmentStatusMap} /> },
     { title: "关联设备", dataIndex: "device_name", width: 120 },
     { title: "关联项目", dataIndex: "project_name", width: 120 },
     { title: "操作", key: "act", width: 150, fixed: "right", render: (_, r) => (

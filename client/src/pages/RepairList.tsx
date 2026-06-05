@@ -7,7 +7,7 @@ import StatusTag from "../components/StatusTag";
 import { repairStatusMap, faultTypeMap } from "./statusLabels";
 import dayjs from "dayjs";
 
-interface Repair { id: number; fault_description: string; fault_type: string; repair_status: string; sent_date: string; returned_date: string | null; repair_provider: string; cost: number; result: string; handlerId: number | null; deviceId: number | null; projectId: number | null; device_name?: string; project_name?: string; handler_name?: string; }
+interface Repair { id: number; fault_description: string; fault_type: string; repair_status: string; sent_date: string; returned_date: string | null; repair_provider: string; cost: number; result: string; handler_id: number | null; device_id: number | null; project_id: number | null; device_name?: string; project_name?: string; handler_name?: string; }
 
 export default function RepairList() {
   const [data, setData] = useState<Repair[]>([]);
@@ -38,7 +38,7 @@ export default function RepairList() {
     setDevices(d.data.data || []); setPersonnel(p.data.data || []);
   };
   const handleAdd = () => { setEditing(null); form.resetFields(); fetchOpts(); setModalOpen(true); };
-  const handleEdit = (r: Repair) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, sentDate: r.sent_date ? dayjs(r.sent_date) : undefined, returnedDate: r.returned_date ? dayjs(r.returned_date) : undefined }); setModalOpen(true); };
+  const handleEdit = (r: Repair) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, sentDate: r.sent_date ? dayjs(r.sent_date) : undefined, returnedDate: r.returned_date ? dayjs(r.returned_date) : undefined, deviceId: r.device_id, handlerId: r.handler_id, faultDescription: r.fault_description, faultType: r.fault_type, repairStatus: r.repair_status, repairProvider: r.repair_provider }); setModalOpen(true); };
   const handleDelete = async (id: number) => { await api.delete(`/repairs/${id}`); message.success("删除成功"); fetchData(); };
   const handleSubmit = async () => {
     const v = await form.validateFields();

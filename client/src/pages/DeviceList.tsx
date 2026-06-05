@@ -7,7 +7,7 @@ import StatusTag from "../components/StatusTag";
 import { deviceStatusMap, shipStatusMap, deviceRepairStatusMap } from "./statusLabels";
 import dayjs from "dayjs";
 
-interface Device { id: number; name: string; model: string; serial_number: string; device_no: string; device_type: string; status: string; location: string; customer: string; hardware_version: string; software_version: string; fpga_version: string; arm_version: string; ship_status: string; ship_date: string | null; return_date: string | null; repair_status: string; projectId: number | null; responsibleId: number | null; project_name?: string; responsible_name?: string; remark: string; }
+interface Device { id: number; name: string; model: string; serial_number: string; device_no: string; device_type: string; status: string; location: string; customer: string; hardware_version: string; software_version: string; fpga_version: string; arm_version: string; ship_status: string; ship_date: string | null; return_date: string | null; repair_status: string; project_id: number | null; responsible_id: number | null; project_name?: string; responsible_name?: string; remark: string; }
 
 export default function DeviceList() {
   const [data, setData] = useState<Device[]>([]);
@@ -40,7 +40,7 @@ export default function DeviceList() {
     setProjects(p.data.data || []); setPersonnel(pe.data.data || []);
   };
   const handleAdd = () => { setEditing(null); form.resetFields(); fetchOpts(); setModalOpen(true); };
-  const handleEdit = (r: Device) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, shipDate: r.ship_date ? dayjs(r.ship_date) : undefined, returnDate: r.return_date ? dayjs(r.return_date) : undefined }); setModalOpen(true); };
+  const handleEdit = (r: Device) => { setEditing(r); fetchOpts(); form.setFieldsValue({ ...r, shipDate: r.ship_date ? dayjs(r.ship_date) : undefined, returnDate: r.return_date ? dayjs(r.return_date) : undefined, projectId: r.project_id, responsibleId: r.responsible_id, deviceNo: r.device_no, serialNumber: r.serial_number, deviceType: r.device_type, hardwareVersion: r.hardware_version, softwareVersion: r.software_version, fpgaVersion: r.fpga_version, armVersion: r.arm_version, shipStatus: r.ship_status, repairStatus: r.repair_status }); setModalOpen(true); };
   const handleDelete = async (id: number) => { await api.delete(`/devices/${id}`); message.success("删除成功"); fetchData(); };
   const handleSubmit = async () => {
     const v = await form.validateFields();

@@ -46,7 +46,7 @@ router.post("/", (req: Request, res: Response) => {
     );
     // 同步设备发货状态
     if (deviceId) {
-      if (status === "delivered" || status === "shipped") {
+      if (status === "delivered") {
         run("UPDATE device SET ship_status='shipped', status='customer_site', ship_date=? WHERE id=?", [shipDate || ts, deviceId]);
       } else if (status === "returned") {
         run("UPDATE device SET ship_status='returned' WHERE id=?", [deviceId]);
@@ -75,7 +75,7 @@ router.put("/:id", (req: Request, res: Response) => {
     const finalStatus = status ?? existing.status;
     const finalShipDate = shipDate ?? existing.ship_date;
     if (finalDeviceId) {
-      if (finalStatus === "delivered" || finalStatus === "shipped") {
+      if (finalStatus === "delivered") {
         run("UPDATE device SET ship_status='shipped', status='customer_site', ship_date=? WHERE id=?", [finalShipDate || ts, finalDeviceId]);
       } else if (finalStatus === "returned") {
         run("UPDATE device SET ship_status='returned' WHERE id=?", [finalDeviceId]);

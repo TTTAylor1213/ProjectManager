@@ -30,7 +30,11 @@ export interface Project {
 }
 
 // ========== 设备 ==========
-export type DeviceStatus = 'normal' | 'abnormal' | 'repairing' | 'shipped' | 'rd';
+export type DeviceStatus = 'normal' | 'abnormal' | 'repairing' | 'shipped' | 'rd'
+  | 'internal_test' | 'customer_site' | 'scrapped' | 'archived';
+
+export type DeviceShipStatus = 'not_shipped' | 'pending' | 'shipped' | 'delivered' | 'returned';
+export type DeviceRepairStatus = 'normal' | 'repairing' | 'repaired';
 
 export interface Device {
   id: number;
@@ -40,10 +44,21 @@ export interface Device {
   model: string;
   serialNumber: string;
   deviceType: string;
+  deviceNo: string;
   status: DeviceStatus;
   location: string;
+  customer: string;
+  hardwareVersion: string;
+  softwareVersion: string;
+  fpgaVersion: string;
+  armVersion: string;
+  shipStatus: DeviceShipStatus;
+  shipDate: string | null;
+  returnDate: string | null;
+  repairStatus: DeviceRepairStatus;
   responsibleId: number | null;
   responsibleName?: string;
+  remark: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,7 +84,11 @@ export interface Shipment {
 }
 
 // ========== 维修 ==========
-export type RepairStatus = 'pending' | 'repairing' | 'fixed' | 'unfixable';
+export type RepairStatus = 'pending' | 'diagnosing' | 'repairing' | 'waiting_parts'
+  | 'fixed' | 'returned' | 'unfixable' | 'closed';
+
+export type FaultType = 'hardware' | 'software' | 'fpga' | 'arm'
+  | 'communication' | 'power' | 'structure' | 'user_error' | 'other';
 
 export interface Repair {
   id: number;
@@ -78,11 +97,13 @@ export interface Repair {
   projectId: number | null;
   projectName?: string;
   faultDescription: string;
+  faultType: FaultType;
   repairStatus: RepairStatus;
   sentDate: string;
   returnedDate: string | null;
   repairProvider: string;
   cost: number;
+  result: string;
   handlerId: number | null;
   handlerName?: string;
   createdAt: string;
